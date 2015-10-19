@@ -5,6 +5,6 @@ sense = SenseHat()
 
 try:
   sense.show_message("Write anything you want!")
-exceptKeyboardInterrupt:
+except KeyboardInterrupt:
   sense.clear()
   exit()
