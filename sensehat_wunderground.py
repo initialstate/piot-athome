@@ -12,10 +12,10 @@ from sense_hat import SenseHat
 STATE = "TN"
 CITY = "Nashville"
 SENSOR_LOCATION_NAME = "Office"
-WUNDERGROUND_API_KEY = "1bf1f464744ce9d7"
+WUNDERGROUND_API_KEY = "Wunderground_API_Key_Here"
 BUCKET_NAME = ":partly_sunny: " + CITY + " Weather"
 BUCKET_KEY = "wundersense"
-ACCESS_KEY = "qC6dQ25yOCP1j2AnIuH9JijTaLnNF5fD"
+ACCESS_KEY = "Your_Access_Key_Here"
 MINUTES_BETWEEN_WUNDERGROUND_READS = 15
 MINUTES_BETWEEN_SENSEHAT_READS = 5
 # ---------------------------------
