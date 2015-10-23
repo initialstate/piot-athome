@@ -4,7 +4,6 @@ import json
 import glob
 import time
 import RPi.GPIO as io
-import thread
 from ISStreamer.Streamer import Streamer
 from sense_hat import SenseHat 
 
@@ -16,8 +15,7 @@ WUNDERGROUND_API_KEY = "Wunderground_API_Key_Here"
 BUCKET_NAME = ":partly_sunny: " + CITY + " Weather"
 BUCKET_KEY = "wundersense"
 ACCESS_KEY = "Your_Access_Key_Here"
-MINUTES_BETWEEN_WUNDERGROUND_READS = 15
-MINUTES_BETWEEN_SENSEHAT_READS = 5
+MINUTES_BETWEEN_READS = 15
 # ---------------------------------
 
 def isFloat(string):
@@ -44,7 +42,7 @@ def get_astronomy():
 		f = urllib2.urlopen(api_astronomy_url)
 	except:
 		print "Failed to get astronomy"
-		return False	
+		return False		
 	json_astronomy = f.read()
 	f.close()
 	return json.loads(json_astronomy)
@@ -131,19 +129,38 @@ def wind_dir_icon(conditions, astronomy):
 	}
 	return icon.get(conditions['current_observation']['wind_dir'],":crescent_moon:")	
 
-def wunderground():
+def main():
+	sense = SenseHat()
 	conditions = get_conditions()
 	astronomy = get_astronomy()
 	streamer = Streamer(bucket_name=BUCKET_NAME, bucket_key=BUCKET_KEY, access_key=ACCESS_KEY)
 	streamer.log(":house: Location",conditions['current_observation']['display_location']['full'])
-	f = open("status.txt","w")
-
 	while True:
+		# -------------- Sense Hat --------------
+		# Read the sensors
+		temp_c = sense.get_temperature()
+		humidity = sense.get_humidity() 
+		pressure_mb = sense.get_pressure() 
+
+		# Format the data
+		temp_f = temp_c * 9.0 / 5.0 + 32.0
+		temp_f = float("{0:.2f}".format(temp_f))
+		humidity = float("{0:.2f}".format(humidity))
+		pressure_in = 0.0295301*(pressure_mb)
+		pressure_in = float("{0:.2f}".format(pressure_in))
+
+		# Print and stream 
+		print SENSOR_LOCATION_NAME + " Temperature(F): " + str(temp_f)
+		print SENSOR_LOCATION_NAME + " Humidity(%): " + str(humidity)
+		print SENSOR_LOCATION_NAME + " Pressure(IN): " + str(pressure_in)
+		streamer.log(":sunny: " + SENSOR_LOCATION_NAME + " Temperature(F)", temp_f)
+		streamer.log(":sweat_drops: " + SENSOR_LOCATION_NAME + " Humidity(%)", humidity)
+		streamer.log(":cloud: " + SENSOR_LOCATION_NAME + " Pressure (IN)", pressure_in)
+
+		# -------------- Wunderground --------------
 		conditions = get_conditions()
 		astronomy = get_astronomy()
-
 		if ((conditions != False) and (astronomy != False)):
-
 			humidity_pct = conditions['current_observation']['relative_humidity']
 			humidity = humidity_pct.replace("%","")
 
@@ -172,41 +189,7 @@ def wunderground():
 			if isFloat(conditions['current_observation']['UV']):
 				streamer.log(":sunny: " + CITY + " UV Index:",conditions['current_observation']['UV'])
 			streamer.flush()
-
-		time.sleep(60*MINUTES_BETWEEN_WUNDERGROUND_READS)
-
-def main():
-	try:
-		thread.start_new_thread(wunderground, ())
-	except:
-		print "Error: unable to start wunderground thread"
-
-	sense = SenseHat()
-	streamer = Streamer(bucket_name=BUCKET_NAME, bucket_key=BUCKET_KEY, access_key=ACCESS_KEY)
-	while True:
-		# Read the sensors
-		temp_c = sense.get_temperature()
-		humidity = sense.get_humidity() 
-		pressure_mb = sense.get_pressure() 
-
-		# Format the data
-		temp_f = temp_c * 9.0 / 5.0 + 32.0
-		temp_f = float("{0:.2f}".format(temp_f))
-		humidity = float("{0:.2f}".format(humidity))
-		pressure_in = 0.03937008*(pressure_mb)
-		pressure_in = float("{0:.2f}".format(pressure_in))
-
-		# Print and stream 
-		sense.show_message(str(temp_f))
-		print SENSOR_LOCATION_NAME + " Temperature(F): " + str(temp_f)
-		print SENSOR_LOCATION_NAME + " Humidity(%): " + str(humidity)
-		print SENSOR_LOCATION_NAME + " Pressure(IN): " + str(pressure_in)
-		streamer.log(":sunny: " + SENSOR_LOCATION_NAME + " Temperature(F)", temp_f)
-		streamer.log(":sweat_drops: " + SENSOR_LOCATION_NAME + " Humidity(%)", humidity)
-		streamer.log(":cloud: " + SENSOR_LOCATION_NAME + " Pressure(IN)", pressure_in)
-
-		streamer.flush()
-		time.sleep(60*MINUTES_BETWEEN_SENSEHAT_READS)
+		time.sleep(60*MINUTES_BETWEEN_READS)
 
 if __name__ == "__main__":
     main()
